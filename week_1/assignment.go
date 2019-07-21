@@ -10,7 +10,7 @@ import (
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print(">")
+	printMark()
 	for scanner.Scan() {
 		input := scanner.Text()
 		a, b, op, err := util.ParseInput(input)
