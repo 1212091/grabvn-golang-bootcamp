@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -8,6 +9,7 @@ import (
 
 // Slice reads the content of file and put it in the word map
 func Slice(fileContent string, wordMapChannel chan map[string]int, wg *sync.WaitGroup) {
+	fmt.Println("Slice file")
 	wordsMap := make(map[string]int)
 	var regex = `[^A-Za-z0-9 ]+`
 	var re = regexp.MustCompile(regex)
