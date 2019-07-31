@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 
@@ -14,39 +15,87 @@ const (
 	port = ":15000"
 )
 
+var passengerList = []Passenger{Passenger{passengerID: 1}, Passenger{passengerID: 2}, Passenger{passengerID: 3}, Passenger{passengerID: 4}}
+
+var passengerFeedbackList = make([]PassengerFeedback, 0)
+
+type Passenger struct {
+	passengerID int
+}
+
 // PassengerFeedbackServer is used to implement passenger feedback system
-type PassengerFeedbackServer struct {
-	passengerFeedbacks []*pb.PassengerFeedback
+type PassengerFeedback struct {
+	passengerFeedback *pb.PassengerFeedback
 }
 
 // AddPassengerFeedback implements add passenger feedback
-func (passengerFeedbackServer *PassengerFeedbackServer) AddPassengerFeedback(ctx context.Context,
-	in *pb.AddPassengerFeedbackRequest) (*pb.AddPassengerFeedbackResponse, error) {
+func (passengerFeedbackServer *PassengerFeedback) AddPassengerFeedback(ctx context.Context,
+	addPassengerFeedbackRequest *pb.AddPassengerFeedbackRequest) (*pb.AddPassengerFeedbackResponse, error) {
 
-	passengerFeedbackServer.passengerFeedbacks = append(passengerFeedbackServer.passengerFeedbacks, in.PassengerFeedback)
+	err := validateBookingCode(addPassengerFeedbackRequest)
 
-	return &pb.AddPassengerFeedbackResponse{PassengerFeedback: in.PassengerFeedback, Success: true}, nil
+	if err != nil {
+		return &pb.AddPassengerFeedbackResponse{PassengerFeedback: passengerFeedbackList[len(passengerFeedbackList)-1].passengerFeedback, Success: false}, err
+	}
+
+	passengerFeedbackList = append(passengerFeedbackList, PassengerFeedback{passengerFeedback: addPassengerFeedbackRequest.PassengerFeedback})
+
+	return &pb.AddPassengerFeedbackResponse{PassengerFeedback: passengerFeedbackList[len(passengerFeedbackList)-1].passengerFeedback, Success: true}, nil
 }
 
-// DeletePassengerFeedbackByPassengerId implements add passenger feedback
-func (passengerFeedbackServer *PassengerFeedbackServer) DeletePassengerFeedbackByPassengerId(ctx context.Context,
-	in *pb.DeletePassengerFeedbackByPassengerIdRequest) (*pb.DeletePassengerFeedbackByPassengerIdResponse, error) {
+// DeletePassengerFeedbackByPassengerId implements delete passenger feedback by passenger Id
+func (passengerFeedbackServer *PassengerFeedback) DeletePassengerFeedbackByPassengerId(ctx context.Context,
+	deletePassengerFeedbackByPassengerIdRequest *pb.DeletePassengerFeedbackByPassengerIdRequest) (*pb.DeletePassengerFeedbackByPassengerIdResponse, error) {
+
+	for index, passengerFeedback := range passengerFeedbackList {
+		if passengerFeedback.passengerFeedback.PassengerID == deletePassengerFeedbackByPassengerIdRequest.PassengerId {
+			removePassengerFeedbackOutOfList(index)
+		}
+	}
 
 	return &pb.DeletePassengerFeedbackByPassengerIdResponse{Success: true}, nil
 }
 
-// DeletePassengerFeedbackByPassengerId implements add passenger feedback
-func (passengerFeedbackServer *PassengerFeedbackServer) GetPassengerFeedbackByBookingCode(ctx context.Context,
-	in *pb.GetPassengerFeedbackByBookingCodeRequest) (*pb.GetPassengerFeedbackByBookingCodeResponse, error) {
+func removePassengerFeedbackOutOfList(index int) {
+	passengerFeedbackList = append(passengerFeedbackList[:index], passengerFeedbackList[index+1:]...)
+}
+
+func validateBookingCode(addPassengerFeedbackRequest *pb.AddPassengerFeedbackRequest) error {
+	for _, passengerFeedback := range passengerFeedbackList {
+		if passengerFeedback.passengerFeedback.BookingCode == addPassengerFeedbackRequest.PassengerFeedback.BookingCode {
+			err := errors.New("The booking code of this feedback is already existed")
+			return err
+		}
+	}
+	return nil
+}
+
+// GetPassengerFeedbackByBookingCode implements get passenger feedback by booking code
+func (passengerFeedbackServer *PassengerFeedback) GetPassengerFeedbackByBookingCode(ctx context.Context,
+	getPassengerFeedbackByBookingCodeRequest *pb.GetPassengerFeedbackByBookingCodeRequest) (*pb.GetPassengerFeedbackByBookingCodeResponse, error) {
+
+	for _, passengerFeedback := range passengerFeedbackList {
+		if passengerFeedback.passengerFeedback.BookingCode == getPassengerFeedbackByBookingCodeRequest.BookingCode {
+			return &pb.GetPassengerFeedbackByBookingCodeResponse{PassengerFeedback: passengerFeedback.passengerFeedback}, nil
+		}
+	}
 
 	return &pb.GetPassengerFeedbackByBookingCodeResponse{PassengerFeedback: nil}, nil
 }
 
-// DeletePassengerFeedbackByPassengerId implements add passenger feedback
-func (passengerFeedbackServer *PassengerFeedbackServer) GetPassengerFeedbackByPassengerId(ctx context.Context,
-	in *pb.GetPassengerFeedbackByPassengerRequest) (*pb.GetPassengerFeedbackByPassengerIdResponse, error) {
+// GetPassengerFeedbackByPassengerId implements get passenger feedback by passenger Id
+func (passengerFeedbackServer *PassengerFeedback) GetPassengerFeedbackByPassengerId(ctx context.Context,
+	getPassengerFeedbackByPassengerRequest *pb.GetPassengerFeedbackByPassengerRequest) (*pb.GetPassengerFeedbackByPassengerIdResponse, error) {
 
-	return &pb.GetPassengerFeedbackByPassengerIdResponse{PassengerFeedbacks: nil}, nil
+	passengerFeedbackChosenList := make([]*pb.PassengerFeedback, 0)
+
+	for _, passengerFeedback := range passengerFeedbackList {
+		if passengerFeedback.passengerFeedback.PassengerID == getPassengerFeedbackByPassengerRequest.PassengerID {
+			passengerFeedbackChosenList = append(passengerFeedbackChosenList, passengerFeedback.passengerFeedback)
+		}
+	}
+
+	return &pb.GetPassengerFeedbackByPassengerIdResponse{PassengerFeedbacks: passengerFeedbackChosenList}, nil
 }
 
 func main() {
@@ -57,7 +106,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterPassengerFeedbackServiceServer(grpcServer, &PassengerFeedbackServer{})
+	pb.RegisterPassengerFeedbackServiceServer(grpcServer, &PassengerFeedback{})
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
