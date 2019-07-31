@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package passengerfeedback;
+
+service PassengerFeedbackService {
+    rpc AddPassengerFeedback(AddPassengerFeedbackRequest) returns (AddPassengerFeedbackResponse) {}
+
+    rpc GetPassengerFeedbackByPassengerId(GetPassengerFeedbackByPassengerRequest) returns (GetPassengerFeedbackByPassengerIdResponse) {}
+
+    rpc GetPassengerFeedbackByBookingCode(GetPassengerFeedbackByBookingCodeRequest) returns (GetPassengerFeedbackByBookingCodeResponse) {}
+
+    rpc DeletePassengerFeedbackByPassengerId(DeletePassengerFeedbackByPassengerIdRequest) returns (DeletePassengerFeedbackByPassengerIdResponse) {}
+}
+
+message PassengerFeedback {
+    string bookingCode = 1;
+    int32 passengerID = 2;
+    string feedback = 3;
+}
+
+message AddPassengerFeedbackRequest {
+    PassengerFeedback passengerFeedback = 1;
+}
+
+message GetPassengerFeedbackByPassengerIdResponse {
+    repeated PassengerFeedback passengerFeedbacks = 1;
+}
+
+message GetPassengerFeedbackByBookingCodeResponse {
+    PassengerFeedback passengerFeedback = 1;
+}
+
+message AddPassengerFeedbackResponse {
+    PassengerFeedback passengerFeedback = 1;
+    bool success = 2;
+}
+
+message GetPassengerFeedbackByPassengerRequest {
+    int32 passengerID = 1;
+}
+
+message GetPassengerFeedbackByBookingCodeRequest {
+    string bookingCode = 1;
+}
+
+message DeletePassengerFeedbackByPassengerIdRequest {
+    int32 passengerId = 1;
+}
+
+message DeletePassengerFeedbackByPassengerIdResponse {
+    bool success = 1;
+}
+
