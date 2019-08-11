@@ -119,3 +119,43 @@ func TestGetToDo(t *testing.T) {
 		log.Fatalf("Error on Verify: %v", err)
 	}
 }
+
+func TestDeleteToDo(t *testing.T) {
+	// Create Pact connecting to local Daemon
+	pact := &dsl.Pact{
+		Consumer: "ToDoConsumer",
+		Provider: "ToDoService",
+		Host:     "localhost",
+	}
+	defer pact.Teardown()
+
+	// Set up our expected interactions.
+	pact.
+		AddInteraction().
+		UponReceiving("A request to delete todo item").
+		WithRequest(dsl.Request{
+			Method:  "DELETE",
+			Path:    dsl.String("/v1/todo/1"),
+			Headers: dsl.MapMatcher{"Content-Type": dsl.String("application/json")},
+		}).
+		WillRespondWith(dsl.Response{
+			Status:  200,
+			Headers: dsl.MapMatcher{"Content-Type": dsl.String("application/json")},
+		})
+
+	// Pass in test case. This is the component that makes the external HTTP call
+
+	var test = func() (err error) {
+		proxy := ToDoProxy{Host: "localhost", Port: pact.Server.Port}
+		err = proxy.DeleteToDo("1")
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Run the test, verify it did what we expected and capture the contract
+	if err := pact.Verify(test); err != nil {
+		log.Fatalf("Error on Verify: %v", err)
+	}
+}
