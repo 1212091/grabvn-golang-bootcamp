@@ -54,7 +54,7 @@ func (client *Client) callWithRetry() error {
 	err := retry.Do(
 		func() error {
 			resp, err := http.Get(url)
-			if resp.StatusCode != 200 {
+			if resp.StatusCode >= 500 {
 				client.logger.Error("Server error")
 				return errors.New("Server error")
 			}
